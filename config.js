@@ -8,7 +8,7 @@
 // =====================================================================
 window.ATOLYE_AYAR = {
   SUPABASE_URL: "https://vlmwyraqdklzrgaowqaa.supabase.co",
-  SUPABASE_ANON_KEY: "BURAYA_YAPISTIR",
+  SUPABASE_ANON_KEY: "sb_publishable_aw-NF-Wx53JGPFjUSvZWjg_9bLg5-Nb",
 
   // Telefon bildirimleri için (sonra eklenecek). Boşsa bildirim düğmesi gizlenir.
   VAPID_PUBLIC_KEY: "",
