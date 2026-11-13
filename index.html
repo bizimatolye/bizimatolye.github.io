@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <title>Atölye</title>
-<meta name="theme-color" content="#0B1311">
+<meta name="theme-color" content="#F5F3EF">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -220,7 +220,7 @@ body.klavye .yazma.sekmeli{padding-bottom:calc(var(--alt) + 10px)}
 </style>
 <script>
 // Tema, sayfa çizilmeden önce uygulanır (ekran yanıp sönmesin)
-(function(){ try { var t = localStorage.getItem('tema') || 'zumrut'; document.documentElement.setAttribute('data-tema', t);
+(function(){ try { var t = localStorage.getItem('tema') || 'gunisigi'; document.documentElement.setAttribute('data-tema', t);
   var m = document.querySelector('meta[name=theme-color]'); if (m) m.content = t === 'gunisigi' ? '#F5F3EF' : '#0B1311'; } catch(e) {} })();
 </script>
 
@@ -452,7 +452,7 @@ const D = {
   dm:null, cevrimici:new Set(), yaziyorKim:null, yaziyorZaman:null,
 };
 // ---------- tema ----------
-const temaAl = () => { try { return localStorage.getItem('tema') || 'zumrut'; } catch { return 'zumrut'; } };
+const temaAl = () => { try { return localStorage.getItem('tema') || 'gunisigi'; } catch { return 'gunisigi'; } };
 function temaUygula(t){
   try { localStorage.setItem('tema', t); } catch {}
   document.documentElement.setAttribute('data-tema', t);
@@ -1001,7 +1001,7 @@ function menuPanel(){
           <i style="width:48%;align-self:flex-end;background:${benim}"></i>
           <i style="width:40%;background:${diger};border:1px solid ${k === 'gunisigi' ? '#E2DCD2' : 'transparent'}"></i>
         </span>
-        <b>${ad}${temaAl() === k ? '<span style="color:var(--vurgu)">✓</span>' : ''}</b>
+        <b>${ad}<span class="tema-isaret" style="color:var(--vurgu)" ${temaAl() === k ? '' : 'hidden'}>✓</span></b>
       </button>`).join('')}
     </div>
     ${pushVar ? `<button class="menu-satir" id="m-bildirim">${I.zil}<div>Telefon bildirimleri<small>${izin === 'granted' ? 'Açık ✓ (yeniden kaydetmek için dokun)' : izin === 'denied' ? 'Engellenmiş — telefon ayarlarından izin ver' : 'Yeni mesaj gelince telefonuna bildirim düşsün'}</small></div></button>` : ''}
@@ -1017,7 +1017,16 @@ function menuPanel(){
       else alert(iOS ? "Safari'de alttaki Paylaş (kare ve ok) simgesine dokun → \"Ana Ekrana Ekle\" → Ekle.\n\nSonra uygulamayı ana ekrandaki ikondan aç." : "Chrome'da sağ üstteki ⋮ menü → \"Ana ekrana ekle\" ya da \"Uygulamayı yükle\".");
     });
     panel.querySelector('#m-sifre').onclick = () => { kapat(); sifrePanel(); };
-    panel.querySelectorAll('[data-tema-sec]').forEach(b => b.onclick = () => { temaUygula(b.dataset.temaSec); kapat(); menuPanel(); });
+    // Tema seçilince menü açık kalır, sadece seçili kart güncellenir
+    panel.querySelectorAll('[data-tema-sec]').forEach(b => b.onclick = () => {
+      temaUygula(b.dataset.temaSec);
+      panel.querySelectorAll('[data-tema-sec]').forEach(x => {
+        const secili = x === b;
+        x.classList.toggle('secili', secili);
+        x.setAttribute('aria-pressed', secili);
+        const isaret = x.querySelector('.tema-isaret'); if (isaret) isaret.hidden = !secili;
+      });
+    });
     panel.querySelector('#m-cikis').onclick = async () => { kapat(); await D.api.cikis(); location.href = location.pathname; };
   });
 }
