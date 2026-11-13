@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <title>Atölye</title>
-<meta name="theme-color" content="#F5F3EF">
+<meta name="theme-color" content="#0B1311">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -50,13 +50,13 @@
   --baslik-font:"Space Grotesk",Inter,-apple-system,"Segoe UI",sans-serif; }
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;height:100%;background:var(--bg);color:var(--yazi);font:15px/1.45 var(--font);overscroll-behavior:none;transition:background .25s,color .25s}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--yazi);font:15px/1.45 var(--font);overscroll-behavior:none;transition:background .25s,color .25s}
 button,input,textarea,select{font:inherit;color:inherit}
 button{cursor:pointer;border:0;background:none;padding:0}
 a{color:var(--vurgu)}
 .gizli{display:none!important}
 [hidden]{display:none!important}
-#app{height:100dvh;display:flex;flex-direction:column;max-width:760px;margin:0 auto;position:relative}
+#app{height:var(--vh,100dvh);display:flex;flex-direction:column;max-width:760px;margin:0 auto;position:relative}
 
 /* ---------- ortak ---------- */
 .ust{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;
@@ -146,7 +146,8 @@ body.klavye .yazma.sekmeli{padding-bottom:calc(var(--alt) + 10px)}
 .yaziyor-nokta i{width:4px;height:4px;border-radius:50%;background:currentColor;animation:zipla 1s infinite}
 .yaziyor-nokta i:nth-child(2){animation-delay:.15s}.yaziyor-nokta i:nth-child(3){animation-delay:.3s}
 @keyframes zipla{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-3px);opacity:1}}
-.mesajlar{padding:12px 14px;display:flex;flex-direction:column}
+#kaydir{display:flex;flex-direction:column;overscroll-behavior:contain}
+.mesajlar{padding:12px 14px;display:flex;flex-direction:column;margin-top:auto} /* az mesaj varken de yazma kutusunun hemen üstünde dursun */
 .gun{align-self:center;font-size:12px;font-weight:600;color:var(--soluk);background:var(--s2);padding:5px 12px;border-radius:999px;margin:14px 0 8px}
 .m{max-width:80%;display:flex;flex-direction:column;margin-top:8px;align-self:flex-start;user-select:text;-webkit-user-select:text;-webkit-touch-callout:none}
 .m.devam{margin-top:3px}
@@ -220,7 +221,7 @@ body.klavye .yazma.sekmeli{padding-bottom:calc(var(--alt) + 10px)}
 </style>
 <script>
 // Tema, sayfa çizilmeden önce uygulanır (ekran yanıp sönmesin)
-(function(){ try { var t = localStorage.getItem('tema') || 'gunisigi'; document.documentElement.setAttribute('data-tema', t);
+(function(){ try { var t = localStorage.getItem('tema') || 'zumrut'; document.documentElement.setAttribute('data-tema', t);
   var m = document.querySelector('meta[name=theme-color]'); if (m) m.content = t === 'gunisigi' ? '#F5F3EF' : '#0B1311'; } catch(e) {} })();
 </script>
 
@@ -452,7 +453,7 @@ const D = {
   dm:null, cevrimici:new Set(), yaziyorKim:null, yaziyorZaman:null,
 };
 // ---------- tema ----------
-const temaAl = () => { try { return localStorage.getItem('tema') || 'gunisigi'; } catch { return 'gunisigi'; } };
+const temaAl = () => { try { return localStorage.getItem('tema') || 'zumrut'; } catch { return 'zumrut'; } };
 function temaUygula(t){
   try { localStorage.setItem('tema', t); } catch {}
   document.documentElement.setAttribute('data-tema', t);
@@ -756,7 +757,8 @@ function cizSohbet(dm){
   const boyutla = () => { metin.style.height = 'auto'; metin.style.height = Math.min(metin.scrollHeight, 140) + 'px'; };
   let sonYaziyor = 0;
   metin.oninput = () => {
-    boyutla(); sessionStorage.setItem('taslak-' + p.id, metin.value);
+    const k = document.getElementById('kaydir'); const altta = k && k.scrollHeight - k.scrollTop - k.clientHeight < 80;
+    boyutla(); sessionStorage.setItem('taslak-' + p.id, metin.value); if (altta) enAltaKaydir();
     if (metin.value && Date.now() - sonYaziyor > 2500){ sonYaziyor = Date.now(); D.api.yaziyor?.(p.id, D.ben.id); }
   };
   metin.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey && !dokunmatik && !e.isComposing){ e.preventDefault(); gonder(); } };
@@ -1136,6 +1138,21 @@ window.addEventListener('popstate', e => {
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && D.ben){ listeYenile(); if (sohbetteMi() && D.aktif) D.api.okundu(D.aktif.id); }
 });
+// ---------- klavye: iPhone'da sayfa kaymasın, mesajlar yazma kutusunun üstünde kalsın ----------
+function enAltaKaydir(){ const k = document.getElementById('kaydir'); if (k) k.scrollTop = k.scrollHeight; }
+if (window.visualViewport){
+  const vv = window.visualViewport;
+  const ayarla = () => {
+    document.documentElement.style.setProperty('--vh', Math.round(vv.height) + 'px');
+    if (window.scrollY || vv.offsetTop) window.scrollTo(0, 0);
+    if (sohbetteMi() && document.activeElement?.id === 'metin') enAltaKaydir();
+  };
+  vv.addEventListener('resize', ayarla);
+  vv.addEventListener('scroll', () => { if (window.scrollY) window.scrollTo(0, 0); });
+  ayarla();
+}
+document.addEventListener('focusin', e => { if (e.target?.id === 'metin') setTimeout(enAltaKaydir, 350); });
+
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); window.kurulumIstegi = e; });
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:'){
