@@ -1,14 +1,15 @@
 // =====================================================================
 //  ATÖLYE — ayarlar
-//  Supabase panelinde: Project Settings → API (Data API) bölümünden al.
-//  Bu iki değer "herkese açık" olacak şekilde tasarlanmıştır; asıl
-//  koruma veritabanındaki güvenlik kurallarıdır (kurulum.sql).
-//  Boş bırakırsan uygulama DEMO modunda açılır (sahte verilerle).
+//  SUPABASE_ANON_KEY: Supabase → Project Settings → API Keys →
+//  "Publishable key" (sb_publishable_...) ya da "anon public" anahtarı.
+//  Bu anahtar herkese açık olacak şekilde tasarlanmıştır; asıl koruma
+//  veritabanındaki güvenlik kurallarıdır. "secret" / "service_role"
+//  anahtarını ASLA buraya koyma.
 // =====================================================================
 window.ATOLYE_AYAR = {
-  SUPABASE_URL: "",          // örn: "https://abcdxyz.supabase.co"
-  SUPABASE_ANON_KEY: "",     // "anon public" ya da "publishable" anahtar
+  SUPABASE_URL: "https://vlmwyraqdklzrgaowqaa.supabase.co",
+  SUPABASE_ANON_KEY: "BURAYA_YAPISTIR",
 
-  // Telefon bildirimleri için (KURULUM.md → 5. adım). Boşsa bildirim düğmesi gizlenir.
+  // Telefon bildirimleri için (sonra eklenecek). Boşsa bildirim düğmesi gizlenir.
   VAPID_PUBLIC_KEY: "",
 };
