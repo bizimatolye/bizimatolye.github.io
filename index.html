@@ -253,6 +253,10 @@ function gunBaslik(t){
   if (d.toDateString() === dun.toDateString()) return 'Dün';
   return d.toLocaleDateString('tr-TR', { day:'numeric', month:'long', year: d.getFullYear() === n.getFullYear() ? undefined : 'numeric', weekday:'long' });
 }
+// Telefonla giriş: numara arka planda "90XXXXXXXXXX@atolye.tel" biçiminde bir kimliğe çevrilir (SMS gerekmez).
+function telNormal(g){ let d = String(g || '').replace(/\D/g, ''); if (d.startsWith('90')) d = d.slice(2); if (d.startsWith('0')) d = d.slice(1); return /^5\d{9}$/.test(d) ? d : null; }
+const telKimlik = d => `90${d}@atolye.tel`;
+const telGoster = email => { const m = /^90(\d{3})(\d{3})(\d{2})(\d{2})@atolye\.tel$/i.exec(email || ''); return m ? `0${m[1]} ${m[2]} ${m[3]} ${m[4]}` : (email || ''); };
 const boyut = b => !b ? '' : b < 1024 ? b + ' B' : b < 1048576 ? Math.round(b / 1024) + ' KB' : (b / 1048576).toFixed(1) + ' MB';
 const uzanti = ad => (String(ad).split('.').pop() || 'dosya').slice(0, 4).toUpperCase();
 const gorselMi = tip => /^image\//.test(tip || '');
@@ -355,7 +359,7 @@ async function supabaseKatmani(){
 }
 
 function demoKatmani(){
-  const ben = { id:'u1', email:'hasan@demo' }, o = { id:'u2', email:'arkadas@demo' };
+  const ben = { id:'u1', email:'905555555555@atolye.tel' }, o = { id:'u2', email:'905444444444@atolye.tel' };
   const uyeler = [{ email: ben.email, ad:'Hasan' }, { email: o.email, ad:'Arkadaş' }];
   const simdi = Date.now(), dk = 6e4, sa = 36e5;
   const id = () => Math.random().toString(36).slice(2);
@@ -477,7 +481,7 @@ function tost(metin, tikla){
 }
 const hataMetni = e => {
   const m = (e?.message || String(e));
-  if (/Invalid login/i.test(m)) return 'E-posta ya da şifre yanlış.';
+  if (/Invalid login/i.test(m)) return 'Telefon numarası ya da şifre yanlış.';
   if (/Failed to fetch|NetworkError/i.test(m)) return 'İnternet bağlantısı yok gibi görünüyor.';
   if (/exceeded the maximum|too large|Payload too large/i.test(m)) return 'Dosya çok büyük (en fazla 50 MB).';
   if (/row-level security|permission denied/i.test(m)) return 'Bu işlem için yetkin yok (üye listesinde misin?).';
@@ -493,31 +497,32 @@ function cizGiris(){
   <div class="giris">
     <div class="logo"></div>
     <h2>Atölye</h2>
-    <p>İkinize özel proje ve mesaj alanı.</p>
+    <p>İkinize özel mesaj ve proje alanı. Sadece tanımlı numaralar girebilir.</p>
     <form class="kart" id="giris-form" autocomplete="on">
-      <div class="alan"><label for="eposta">E-posta</label>
-        <input class="girdi" id="eposta" type="email" inputmode="email" autocomplete="username" required ${DEMO ? 'value="hasan@demo"' : ''}></div>
+      <div class="alan"><label for="eposta">Telefon numarası</label>
+        <input class="girdi" id="eposta" type="tel" inputmode="tel" autocomplete="username" placeholder="05xx xxx xx xx" required ${DEMO ? 'value="0555 555 55 55"' : ''}></div>
       <div class="alan"><label for="sifre">Şifre</label>
         <input class="girdi" id="sifre" type="password" autocomplete="current-password" required ${DEMO ? 'value="demo"' : ''}></div>
       <div class="hata" id="giris-hata"></div>
       <button class="btn tam" id="giris-btn" type="submit">Giriş yap</button>
-      <button type="button" id="unuttum" style="display:block;margin:14px auto 0;color:var(--soluk);font-size:13.5px">Şifremi unuttum / belirlemedim</button>
+      <button type="button" id="unuttum" style="display:block;margin:14px auto 0;color:var(--soluk);font-size:13.5px">Şifremi unuttum</button>
     </form>
     ${DEMO ? `<div class="demo-not"><b>Demo modu:</b> config.js boş olduğu için sahte verilerle açıldı. Supabase bilgilerini girince gerçek uygulama çalışır.</div>` : ''}
   </div>`;
   if (LINK_HATA) document.getElementById('giris-hata').textContent = 'E-postadaki link geçersiz ya da süresi dolmuş. Aşağıdan yeni link iste.';
-  document.getElementById('unuttum').onclick = async () => {
-    const email = document.getElementById('eposta').value.trim(), h = document.getElementById('giris-hata');
-    if (!email) { h.textContent = 'Önce e-posta adresini yaz.'; return document.getElementById('eposta').focus(); }
-    try { await D.api.sifreSifirla(email); h.style.color = '#34d399'; h.textContent = 'E-postana şifre belirleme linki gönderildi. Gelen kutunu (ve spam klasörünü) kontrol et.'; }
-    catch (err) { h.style.color = ''; h.textContent = /rate limit|too many/i.test(err.message) ? 'Çok sık istendi, biraz bekleyip tekrar dene.' : hataMetni(err); }
+  document.getElementById('unuttum').onclick = () => {
+    const h = document.getElementById('giris-hata'); h.style.color = 'var(--soluk)';
+    h.textContent = 'Şifreni uygulamayı kuran kişi sıfırlayabilir (Supabase → Authentication → Users). Giriş yaptıktan sonra menüden kendin değiştirebilirsin.';
   };
   document.getElementById('giris-form').onsubmit = async e => {
     e.preventDefault();
     const btn = document.getElementById('giris-btn'), h = document.getElementById('giris-hata');
     btn.disabled = true; btn.innerHTML = '<div class="donen"></div>'; h.textContent = '';
     try {
-      D.ben = await D.api.girisYap(document.getElementById('eposta').value.trim(), document.getElementById('sifre').value);
+      const ham = document.getElementById('eposta').value.trim();
+      const tel = telNormal(ham);
+      if (!tel && !ham.includes('@')) throw new Error('Telefon numarasını 05xx xxx xx xx şeklinde yaz.');
+      D.ben = await D.api.girisYap(tel ? telKimlik(tel) : ham, document.getElementById('sifre').value);
       await basla();
     } catch (err) { h.textContent = hataMetni(err); btn.disabled = false; btn.textContent = 'Giriş yap'; }
   };
@@ -947,14 +952,35 @@ function dosyalarPanel(p, baslik){
   });
 }
 
+function sifrePanel(){
+  panelAc(`<h3>Şifremi değiştir</h3>
+    <form id="sd-form">
+      <input type="text" autocomplete="username" value="${esc(D.ben.email)}" hidden>
+      <div class="alan"><label for="sd1">Yeni şifre (en az 8 karakter)</label><input class="girdi" id="sd1" type="password" autocomplete="new-password" minlength="8" required></div>
+      <div class="alan"><label for="sd2">Yeni şifre tekrar</label><input class="girdi" id="sd2" type="password" autocomplete="new-password" minlength="8" required></div>
+      <div class="hata" id="sd-hata"></div>
+      <button class="btn tam" type="submit">Kaydet</button>
+    </form>`, (panel, kapat) => {
+    panel.querySelector('#sd-form').onsubmit = async e => {
+      e.preventDefault();
+      const a = panel.querySelector('#sd1').value, b = panel.querySelector('#sd2').value, h = panel.querySelector('#sd-hata');
+      if (a.length < 8) return h.textContent = 'Şifre en az 8 karakter olmalı.';
+      if (a !== b) return h.textContent = 'İki şifre aynı değil.';
+      try { await D.api.sifreBelirle(a); kapat(); tost('Şifren değişti ✓'); }
+      catch (err) { h.textContent = /should be different/i.test(err.message) ? 'Yeni şifre eskisiyle aynı olamaz.' : hataMetni(err); }
+    };
+  });
+}
+
 function menuPanel(){
   const pushVar = !!AYAR.VAPID_PUBLIC_KEY && !D.api.demo;
   const izin = 'Notification' in window ? Notification.permission : 'yok';
   panelAc(`
     <h3>${esc(benimAdim())}</h3>
-    <p style="color:var(--soluk);margin:-10px 0 18px;font-size:13.5px">${esc(D.ben.email)}${D.api.demo ? ' · demo modu' : ''}</p>
+    <p style="color:var(--soluk);margin:-10px 0 18px;font-size:13.5px">${esc(telGoster(D.ben.email))}${D.api.demo ? ' · demo modu' : ''}</p>
     ${pushVar ? `<button class="menu-satir" id="m-bildirim">${I.zil}<div>Telefon bildirimleri<small>${izin === 'granted' ? 'Açık ✓ (yeniden kaydetmek için dokun)' : izin === 'denied' ? 'Engellenmiş — telefon ayarlarından izin ver' : 'Yeni mesaj gelince telefonuna bildirim düşsün'}</small></div></button>` : ''}
     ${!kurulu ? `<button class="menu-satir" id="m-kur">${I.tel}<div>Ana ekrana ekle<small>Uygulama gibi tam ekran açılsın</small></div></button>` : ''}
+    <button class="menu-satir" id="m-sifre">${I.menu}<div>Şifremi değiştir<small>Sana verilen geçici şifreyi kendininkiyle değiştir</small></div></button>
     <button class="menu-satir" id="m-cikis" style="color:var(--tehlike)">${I.cikis}<div>Çıkış yap</div></button>
     <p style="color:var(--soluk2);font-size:12px;text-align:center;margin-top:16px">Atölye · ikinize özel</p>
   `, (panel, kapat) => {
@@ -964,6 +990,7 @@ function menuPanel(){
       if (window.kurulumIstegi){ window.kurulumIstegi.prompt(); window.kurulumIstegi = null; }
       else alert(iOS ? "Safari'de alttaki Paylaş (kare ve ok) simgesine dokun → \"Ana Ekrana Ekle\" → Ekle.\n\nSonra uygulamayı ana ekrandaki ikondan aç." : "Chrome'da sağ üstteki ⋮ menü → \"Ana ekrana ekle\" ya da \"Uygulamayı yükle\".");
     });
+    panel.querySelector('#m-sifre').onclick = () => { kapat(); sifrePanel(); };
     panel.querySelector('#m-cikis').onclick = async () => { kapat(); await D.api.cikis(); location.href = location.pathname; };
   });
 }
@@ -1044,7 +1071,7 @@ async function basla(){
     const uyeler = await D.api.uyeler();
     D.adlar = Object.fromEntries(uyeler.map(u => [u.email.toLowerCase(), u.ad]));
     if (!D.adlar[(D.ben.email || '').toLowerCase()]){
-      app.innerHTML = `<div class="giris"><div class="logo"></div><h2>Erişim yok</h2><p>Bu hesap üye listesinde değil. Supabase'de <b>uyeler</b> tablosuna e-postanı ekle.</p><button class="btn ikincil" id="c">Çıkış yap</button></div>`;
+      app.innerHTML = `<div class="giris"><div class="logo"></div><h2>Erişim yok</h2><p>Bu numara (${esc(telGoster(D.ben.email))}) tanımlı kişiler listesinde değil.</p><button class="btn ikincil" id="c">Çıkış yap</button></div>`;
       document.getElementById('c').onclick = async () => { await D.api.cikis(); location.reload(); };
       return;
     }
