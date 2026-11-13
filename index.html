@@ -1156,7 +1156,17 @@ document.addEventListener('focusin', e => { if (e.target?.id === 'metin') setTim
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); window.kurulumIstegi = e; });
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:'){
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(kayit => {
+    // Uygulama her öne gelişinde yeni sürüm var mı diye bak
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) kayit.update().catch(() => {}); });
+  }).catch(() => {});
+  // Yeni sürüm devreye girince sayfayı bir kez yenile (yazılmamış taslaklar oturumda saklı kalır)
+  let yenilendi = false;
+  const ilkKontrolcu = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!ilkKontrolcu || yenilendi) return;
+    yenilendi = true; location.reload();
+  });
   navigator.serviceWorker.addEventListener('message', e => { if (e.data?.tip === 'ac' && e.data.proje && D.ben) projeAc(e.data.proje); });
 }
 

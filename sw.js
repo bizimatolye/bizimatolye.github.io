@@ -1,5 +1,5 @@
 // ATÖLYE — service worker: çevrimdışı açılış + push bildirimleri
-const SURUM = 'atolye-v1';
+const SURUM = 'atolye-v2';
 const KABUK = ['./', './index.html', './config.js', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 
@@ -19,8 +19,9 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const u = new URL(e.request.url);
   if (e.request.method !== 'GET' || u.origin !== location.origin) return;
+  // cache: 'no-cache' → telefonun önbelleğine değil, her seferinde sunucuya "değişti mi?" diye sorar (değişmediyse hızlıca aynısını verir)
   e.respondWith(
-    fetch(e.request).then(cevap => {
+    fetch(e.request.url, { cache: 'no-cache', credentials: 'same-origin' }).then(cevap => {
       if (cevap.ok) { const kopya = cevap.clone(); caches.open(SURUM).then(c => c.put(e.request, kopya)); }
       return cevap;
     }).catch(() => caches.match(e.request, { ignoreSearch: true }).then(r => r || caches.match('./index.html')))
